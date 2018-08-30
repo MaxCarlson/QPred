@@ -19,6 +19,8 @@ timeShift = 15
 
 # Number of data points in a sequence
 timeSteps = 1000
+# % Change we're looking at, up or down
+threshold = 0.04
 dataPath = './data/EOD-INTC.csv'
 
 def createModel(input, outDim, hiddenDim):
@@ -28,7 +30,7 @@ def createModel(input, outDim, hiddenDim):
 # a stock will have changed (up or down) more than x% after n days
 def train():
 
-    convertData(dataPath, timeSteps, timeShift)
+    convertData(dataPath, threshold, timeSteps, timeShift)
 
     features    = cntk.sequence.input_variable((1), name='features')
     label       = cntk.input_variable((3), name='label')
