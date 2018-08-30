@@ -30,7 +30,7 @@ def createModel(input, outDim, hiddenDim):
 # a stock will have changed (up or down) more than x% after n days
 def train():
 
-    convertData(dataPath, threshold, timeSteps, timeShift)
+    convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
 
     features    = cntk.sequence.input_variable((1), name='features')
     label       = cntk.input_variable((3), name='label')

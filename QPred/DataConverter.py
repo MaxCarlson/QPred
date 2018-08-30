@@ -1,6 +1,7 @@
 import numpy as np
 
 closeIdx = 3
+writeTo = './data/'
 
 def fromFile(filePath):
     data = np.loadtxt(filePath, dtype=np.str, delimiter=',', skiprows=1)
@@ -37,7 +38,7 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
     seqs = []
 
     for s in range(0, numSeq*seqDist, seqDist):
-        if s + timeSteps + timeShift > len(data):
+        if s + timeSteps + timeShift >= len(data):
             break
         end = s + timeSteps
         X   = data[s:end]
@@ -46,20 +47,42 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
 
     return seqs
 
+def writeCtf(destName, data):
+    file = open(writeTo + destName + '.ctf', "w+")
+
+    sId = 0
+    for seq in data:
+        i = 0
+        for t in seq[0]:
+            fStr = str(sId) +  ' |X ' + str(t)[1:-1].replace(',', ' ').replace('\n','')
+            if i == 0:
+                fStr += ' |Y ' + str(seq[1]) + ':1'
+            i += 1
+            file.write(fStr + '\n')
+
+        sId += 1
+
+
+
 # This is specific for our current datasets
-def convertData(filePath, threshold, timeSteps, timeShift):
+def convertData(filePath, destName, threshold, timeSteps, timeShift):
     data    = fromFile(filePath)
+
+    #data = data[0:1200]
+
 
     # TODO: Possibly fill in missing dates (weekends/holdiays)
     # with data based on prior prices?
     dates   = data[:, 0:1]
     data    = data[:, 1:].astype(np.float)
 
+
     # Remove adjusted data, dividend, and splits
     data    = data[:,0:5]
     data    = toSequences(data, threshold, timeSteps, timeShift, 5)
 
     normalize(data)
+    writeCtf(destName, data)
 
     a = 5
 
