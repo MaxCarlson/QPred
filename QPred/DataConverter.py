@@ -6,18 +6,20 @@ def fromFile(filePath):
     data = np.loadtxt(filePath, dtype=np.str, delimiter=',', skiprows=1)
     return data
 
-# TODO: Actually we don't want to normalize all the data
-# to one, we want to normalize it inside sequences! I think!
+# Normalize features in each sequence
+# to other data points in the same feature/sequence
 def normalize(data):
     def maxMin(min, minMax, x):
         return  (x - min) / minMax
 
-    for f in range(np.size(data, 1)):
-        min = np.min(data[:,f])
-        max = np.max(data[:,f])
-        minMax = max - min
+    for s in data:
+        ss = s[0]
+        for f in range(np.size(s[0], 1)):
+            min = np.min(s[0][:,f])
+            max = np.max(s[0][:,f])
+            minMax = max - min
         
-        data[:,f] = np.array([maxMin(min, minMax, x) for x in data[:,f]])
+            s[0][:,f] = np.array([maxMin(min, minMax, x) for x in s[0][:,f]])
 
 
 def calcLabel(threshold, lastX, Y):
@@ -35,8 +37,11 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
     seqs = []
 
     for s in range(0, numSeq*seqDist, seqDist):
-        X = data[s:s + seqDist]
-        Y = calcLabel(threshold, data[s+seqDist-1], data[s+seqDist+timeShift])
+        if s + timeSteps + timeShift > len(data):
+            break
+        end = s + timeSteps
+        X   = data[s:end]
+        Y   = calcLabel(threshold, data[end-1], data[end+timeShift])
         seqs.append([X, Y])
 
     return seqs
@@ -50,6 +55,8 @@ def convertData(filePath, threshold, timeSteps, timeShift):
     dates   = data[:, 0:1]
     data    = data[:, 1:].astype(np.float)
 
+    # Remove adjusted data, dividend, and splits
+    data    = data[:,0:5]
     data    = toSequences(data, threshold, timeSteps, timeShift, 5)
 
     normalize(data)
