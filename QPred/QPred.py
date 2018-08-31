@@ -24,7 +24,7 @@ threshold   = 0.04
 dataPath    = './data/EOD-INTC.csv'
 
 numEpochs   = 50
-batchSize   = 128
+batchSize   = 16
 numFeatures = 5
 numClasses  = 3
 lstmLayers  = 6
@@ -42,7 +42,7 @@ def createModel(input, numClasses, hiddenDim):
         cntk.sequence.last,
         cntk.layers.Dense(numClasses)
         ])
-    return
+    return model
 
 # Going to start out trying to predict whether
 # a stock will have changed (up or down) more than x% after n days
@@ -50,35 +50,41 @@ def train():
 
     # TODO: Need to add a method that reads exact sample size when
     # we're loading data that's already been converted
-    convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
+    #convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
 
 
-    features    = cntk.sequence.input_variable((numFeatures), name='features')
-    label       = cntk.input_variable((numClasses), name='label')
+    input   = cntk.sequence.input_variable((numFeatures), name='features')
+    label   = cntk.input_variable((numClasses), name='label')
 
     trainReader = createReader('./data/intel.ctf', True, numFeatures, numClasses)
     inputMap    = { 
-        features: trainReader.streams.features, 
-        labels:   trainReader.streams.labels 
+        input: trainReader.streams.features, 
+        label: trainReader.streams.labels 
     }
 
-    model   = createModel(features, numClasses, lstmLayers)
+    model   = createModel(input, numClasses, lstmLayers)
+    z       = model(input)
 
-    loss    = cntk.cross_entropy_with_softmax(model, label)
-    error   = cntk.classification_error(model, label)
+    loss    = cntk.cross_entropy_with_softmax(z, label)
+    error   = cntk.classification_error(z, label)
 
     lrPerSample = cntk.learning_parameter_schedule_per_sample(0.03)
 
-    learner     = cntk.adam(model.parameters, lrPerSample, 0.98)
-    printer     = cntk.logging.ProgressPrinter(100, tag='Training')
-    trainer     = cntk.Trainer(model, (loss, error), learner, [printer])
+    learner     = cntk.adam(z.parameters, lrPerSample, 0.98)
+    printer     = cntk.logging.ProgressPrinter(10, tag='Training')
+    trainer     = cntk.Trainer(z, (loss, error), learner, [printer])
 
-    samples = 1737
-    mbPerEpoch = samples // batchSize
+    samplesPerSeq   = 1000
+    sequences       = 1992
+
+    minibatchSize   = batchSize * samplesPerSeq
+    minibatches     = sequences // batchSize
 
     for e in range(numEpochs):
-        mb = trainReader.next_minibatch(batchSize, inputMap)
-        trainer.train_minibatch(mb)
+        for b in range(minibatches):
+            mb = trainReader.next_minibatch(minibatchSize, inputMap)
+            trainer.train_minibatch(mb)
+        trainer.summarize_training_progress()
 
 
 

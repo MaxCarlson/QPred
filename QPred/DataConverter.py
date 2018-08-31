@@ -1,7 +1,8 @@
+import copy
 import numpy as np
 
 closeIdx    = 3 # Index of closing price, this is used to calculate our label
-seqDist     = 5 # Distance each sequence is separated from the one before
+seqDist     = 2 # Distance each sequence is separated from the one before
 writeTo     = './data/'
 
 def fromFile(filePath):
@@ -12,17 +13,22 @@ def fromFile(filePath):
 # to other data points in the same feature/sequence
 def normalize(data):
     def maxMin(min, minMax, x):
-        return  (x - min) / minMax
+        a =  (x - min) / minMax
+
+        if a <= 5.61930538e-239:
+            aaa = 5
+        return a
 
     for s in data:
         ss = s[0]
-        for f in range(np.size(s[0], 1)):
-            min = np.min(s[0][:,f])
-            max = np.max(s[0][:,f])
-            minMax = max - min
+        for f in range(np.size(ss, 1)):
+            feats   = ss[:,f]
+            min     = np.min(feats)
+            max     = np.max(feats)
+            minMax  = max - min
         
-            s[0][:,f] = np.array([maxMin(min, minMax, x) for x in s[0][:,f]])
-
+            ss[:,f]   = np.array([maxMin(min, minMax, x) for x in feats])
+            a = 5
 
 def calcLabel(threshold, lastX, Y):
     change = (Y[closeIdx] - lastX[closeIdx]) / lastX[closeIdx]
@@ -42,7 +48,7 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
         if s + timeSteps + timeShift >= len(data):
             break
         end = s + timeSteps
-        X   = data[s:end]
+        X   = copy.copy(data[s:end])
         Y   = calcLabel(threshold, data[end-1], data[end+timeShift])
         seqs.append([X, Y])
 
@@ -69,7 +75,7 @@ def writeCtf(destName, data):
 def convertData(filePath, destName, threshold, timeSteps, timeShift):
     data    = fromFile(filePath)
 
-    data = data[0:1200]
+    data = data[0:5000]
 
 
     # TODO: Possibly fill in missing dates (weekends/holdiays)
