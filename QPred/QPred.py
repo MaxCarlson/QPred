@@ -14,20 +14,21 @@ import matplotlib.pyplot as plt
 #endDate = '2016-12-31'
 #panelData = pddr.DataReader('INPX', 'google', startDate, endDate)
 
-# Number of days ahead to look
-timeShift   = 15
 
-# Number of data points in a sequence
-timeSteps   = 1000
-# % Change we're looking at, up or down
-threshold   = 0.04
 dataPath    = './data/EOD-INTC.csv'
+
+# Data generation parameters
+timeShift   = 15    # Number of days ahead to look
+timeSteps   = 1000  # Number of data points in a sequence
+threshold   = 0.04  # % Change we're looking at, up or down
+numFeatures = 5
+numClasses  = 3
 
 numEpochs   = 50
 batchSize   = 16
-numFeatures = 5
-numClasses  = 3
-lstmLayers  = 6
+
+lstmLayers  = 2
+lstmSize    = 64
 
 def createReader(filePath, isTraining, inputDim, outputDim):
     return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(filePath, cntk.io.StreamDefs(
@@ -36,10 +37,15 @@ def createReader(filePath, isTraining, inputDim, outputDim):
         )), randomize=isTraining, max_sweeps=cntk.io.INFINITELY_REPEAT if isTraining else 1)
                                    
 
-def createModel(input, numClasses, hiddenDim):
+def createModel(input, numClasses, layers, lstmLayers):
     model = cntk.layers.Sequential([
-        cntk.layers.Recurrence(cntk.layers.LSTM(hiddenDim)),
+        cntk.layers.For(range(layers), lambda: 
+                   cntk.layers.Sequential([
+                       cntk.layers.Stabilizer(), 
+                       cntk.layers.Recurrence(cntk.layers.LSTM(lstmLayers), go_backwards=False)
+                   ])),
         cntk.sequence.last,
+        cntk.layers.Dropout(0.15),
         cntk.layers.Dense(numClasses)
         ])
     return model
@@ -56,35 +62,56 @@ def train():
     input   = cntk.sequence.input_variable((numFeatures), name='features')
     label   = cntk.input_variable((numClasses), name='label')
 
-    trainReader = createReader('./data/intel.ctf', True, numFeatures, numClasses)
-    inputMap    = { 
+    trainReader = createReader('./data/intel_train.ctf', True, numFeatures, numClasses)
+    validReader = createReader('./data/intel_valid.ctf', True, numFeatures, numClasses)
+
+    trainInputMap    = { 
         input: trainReader.streams.features, 
         label: trainReader.streams.labels 
     }
 
-    model   = createModel(input, numClasses, lstmLayers)
+    validInputMap   = {
+        input: validReader.streams.features,
+        label: validReader.streams.labels
+    }
+
+    model   = createModel(input, numClasses, lstmLayers, lstmSize)
     z       = model(input)
 
     loss    = cntk.cross_entropy_with_softmax(z, label)
     error   = cntk.classification_error(z, label)
 
-    lrPerSample = cntk.learning_parameter_schedule_per_sample(0.03)
+    lrPerSample = cntk.learning_parameter_schedule_per_sample(0.1)
 
     learner     = cntk.adam(z.parameters, lrPerSample, 0.98)
-    printer     = cntk.logging.ProgressPrinter(10, tag='Training')
+    printer     = cntk.logging.ProgressPrinter(20, tag='Training')
     trainer     = cntk.Trainer(z, (loss, error), learner, [printer])
 
     samplesPerSeq   = 1000
-    sequences       = 1992
+    sequences       = 1792
+
+    validSeqs       = 200
 
     minibatchSize   = batchSize * samplesPerSeq
     minibatches     = sequences // batchSize
+    validBatches    = validSeqs // batchSize
+
+    print("Input sequence length: {} days; Total Sequences: {}".format(samplesPerSeq, sequences + validSeqs))
+    cntk.logging.log_number_of_parameters(z)
+    print("{} epochs; {} minibatches per epoch".format(numEpochs, minibatches))
 
     for e in range(numEpochs):
         for b in range(minibatches):
-            mb = trainReader.next_minibatch(minibatchSize, inputMap)
+            mb = trainReader.next_minibatch(minibatchSize, trainInputMap)
             trainer.train_minibatch(mb)
         trainer.summarize_training_progress()
+
+        # Validate results
+        for b in range(validBatches):
+            mb = validReader.next_minibatch(minibatchSize, validInputMap)
+            trainer.test_minibatch(mb)
+        trainer.summarize_test_progress()
+        print()
 
 
 
