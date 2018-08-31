@@ -1,7 +1,8 @@
 import numpy as np
 
-closeIdx = 3
-writeTo = './data/'
+closeIdx    = 3 # Index of closing price, this is used to calculate our label
+seqDist     = 5 # Distance each sequence is separated from the one before
+writeTo     = './data/'
 
 def fromFile(filePath):
     data = np.loadtxt(filePath, dtype=np.str, delimiter=',', skiprows=1)
@@ -68,7 +69,7 @@ def writeCtf(destName, data):
 def convertData(filePath, destName, threshold, timeSteps, timeShift):
     data    = fromFile(filePath)
 
-    #data = data[0:1200]
+    data = data[0:1200]
 
 
     # TODO: Possibly fill in missing dates (weekends/holdiays)
@@ -79,10 +80,8 @@ def convertData(filePath, destName, threshold, timeSteps, timeShift):
 
     # Remove adjusted data, dividend, and splits
     data    = data[:,0:5]
-    data    = toSequences(data, threshold, timeSteps, timeShift, 5)
+    data    = toSequences(data, threshold, timeSteps, timeShift, seqDist)
 
     normalize(data)
     writeCtf(destName, data)
-
-    a = 5
 
