@@ -1,4 +1,5 @@
 import cntk
+import argparse
 import numpy as np
 from DataConverter import convertData
 import matplotlib.pyplot as plt
@@ -27,14 +28,14 @@ numClasses  = 3
 numEpochs   = 50
 batchSize   = 16
 
-lstmLayers  = 2
-lstmSize    = 64
+lstmLayers  = 6
+lstmSize    = 64 # TODO: Why are we getting NAN loss when lstmSize >= 96
 
 def createReader(filePath, isTraining, inputDim, outputDim):
     return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(filePath, cntk.io.StreamDefs(
         features = cntk.io.StreamDef(field='X', shape=inputDim,  is_sparse=False),
         labels   = cntk.io.StreamDef(field='Y', shape=outputDim, is_sparse=True),
-        )), randomize=isTraining, max_sweeps=cntk.io.INFINITELY_REPEAT if isTraining else 1)
+        )), randomize=isTraining, max_sweeps=cntk.io.INFINITELY_REPEAT)
                                    
 
 def createModel(input, numClasses, layers, lstmLayers):
@@ -58,12 +59,11 @@ def train():
     # we're loading data that's already been converted
     #convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
 
-
     input   = cntk.sequence.input_variable((numFeatures), name='features')
     label   = cntk.input_variable((numClasses), name='label')
 
-    trainReader = createReader('./data/intel_train.ctf', True, numFeatures, numClasses)
-    validReader = createReader('./data/intel_valid.ctf', True, numFeatures, numClasses)
+    trainReader = createReader('./data/intel_train.ctf', True,  numFeatures, numClasses)
+    validReader = createReader('./data/intel_valid.ctf', False, numFeatures, numClasses)
 
     trainInputMap    = { 
         input: trainReader.streams.features, 
@@ -79,28 +79,33 @@ def train():
     z       = model(input)
 
     loss    = cntk.cross_entropy_with_softmax(z, label)
-    error   = cntk.classification_error(z, label)
+    error   = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
+    #error   = cntk.classification_error(z, label)
 
-    lrPerSample = cntk.learning_parameter_schedule_per_sample(0.1)
 
-    learner     = cntk.adam(z.parameters, lrPerSample, 0.98)
+    #lr = cntk.learning_parameter_schedule_per_sample(0.1)
+    lr = 0.11
+
+    learner     = cntk.adam(z.parameters, lr, 0.98)
+    #tbWriter    = cntk.logging.TensorBoardProgressWriter(1, './Tensorboard/', model=model)
     printer     = cntk.logging.ProgressPrinter(20, tag='Training')
     trainer     = cntk.Trainer(z, (loss, error), learner, [printer])
 
+    # TODO: These should be automatically detected!
     samplesPerSeq   = 1000
     sequences       = 1792
-
-    validSeqs       = 200
+    validSeqs       = 199
 
     minibatchSize   = batchSize * samplesPerSeq
     minibatches     = sequences // batchSize
     validBatches    = validSeqs // batchSize
 
-    print("Input sequence length: {} days; Total Sequences: {}".format(samplesPerSeq, sequences + validSeqs))
     cntk.logging.log_number_of_parameters(z)
-    print("{} epochs; {} minibatches per epoch".format(numEpochs, minibatches))
+    print("Input days: {}; Looking for +-= {:.1f}% change {} days ahead;".format(samplesPerSeq, threshold*100.0, timeShift))
+    print("Total Sequences: {}; {} epochs; {} minibatches per epoch;".format(sequences + validSeqs, numEpochs, minibatches+validBatches))
 
     for e in range(numEpochs):
+        # Train network
         for b in range(minibatches):
             mb = trainReader.next_minibatch(minibatchSize, trainInputMap)
             trainer.train_minibatch(mb)
@@ -115,6 +120,11 @@ def train():
 
 
 
-    return
 
-train()
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-curate')
+
+    train()
+

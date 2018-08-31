@@ -50,8 +50,6 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
     return seqs
 
 def writeCtf(destName, data):
-    aa = len(data)
-
     file = open(writeTo + destName + '.ctf', "w+")
 
     sId = 0
@@ -73,7 +71,7 @@ def writeCtf(destName, data):
 def convertData(filePath, destName, threshold, timeSteps, timeShift, split=[0.9,0.1]):
     data    = fromFile(filePath)
 
-    data = data[0:5000]
+    #data = data[0:5000]
 
     # TODO: Possibly fill in missing dates (weekends/holdiays)
     # and include dates, or relative dates into features?
@@ -86,7 +84,6 @@ def convertData(filePath, destName, threshold, timeSteps, timeShift, split=[0.9,
     data    = toSequences(data, threshold, timeSteps, timeShift, seqDist)
 
     normalize(data)
-
     
     # TODO: This presents an intersting question on how to split data when
     # sequences overlap. Should it be purely based on time ensuring no overlap?
