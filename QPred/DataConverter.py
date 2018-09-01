@@ -12,6 +12,7 @@ def fromFile(filePath):
 # Normalize features in each sequence
 # to other data points in the same feature/sequence
 def normalize(data):
+    print('Normalizing Data...')
     def maxMin(min, minMax, x):
         return (x - min) / minMax
 
@@ -35,6 +36,7 @@ def calcLabel(threshold, lastX, Y):
 
 # TODO: Another question, should our sequences overlap at all?
 def toSequences(data, threshold, timeSteps, timeShift, seqDist):
+    print('Converting to sequences...')
     numSeq = (len(data) - timeSteps + timeShift) // seqDist
 
     seqs = []
@@ -50,7 +52,10 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
     return seqs
 
 def writeCtf(destName, data):
-    file = open(writeTo + destName + '.ctf', "w+")
+    wFileName   = writeTo + destName + '.ctf'
+    file        = open(wFileName, "w+")
+
+    print('Writing to ./' + wFileName)
 
     sId = 0
     for seq in data:

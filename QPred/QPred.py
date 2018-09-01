@@ -19,16 +19,16 @@ import matplotlib.pyplot as plt
 dataPath    = './data/EOD-INTC.csv'
 
 # Data generation parameters
-timeShift   = 15    # Number of days ahead to look
-timeSteps   = 1000  # Number of data points in a sequence
-threshold   = 0.04  # % Change we're looking at, up or down
+timeShift   = 7    # Number of days ahead to look
+timeSteps   = 300  # Number of data points in a sequence
+threshold   = 0.03  # % Change we're looking at, up or down
 numFeatures = 5
 numClasses  = 3
 
 numEpochs   = 50
 batchSize   = 16
 
-lstmLayers  = 6
+lstmLayers  = 4
 lstmSize    = 64 # TODO: Why are we getting NAN loss when lstmSize >= 96
 
 def createReader(filePath, isTraining, inputDim, outputDim):
@@ -46,7 +46,7 @@ def createModel(input, numClasses, layers, lstmLayers):
                        cntk.layers.Recurrence(cntk.layers.LSTM(lstmLayers), go_backwards=False)
                    ])),
         cntk.sequence.last,
-        cntk.layers.Dropout(0.15),
+        cntk.layers.Dropout(0.1),
         cntk.layers.Dense(numClasses)
         ])
     return model
@@ -83,18 +83,18 @@ def train():
     #error   = cntk.classification_error(z, label)
 
 
-    #lr = cntk.learning_parameter_schedule_per_sample(0.1)
-    lr = 0.11
+    lr = cntk.learning_parameter_schedule_per_sample(0.0085)
+    #lr = 0.5
 
-    learner     = cntk.adam(z.parameters, lr, 0.98)
+    learner     = cntk.adam(z.parameters, lr, 0.9, gradient_clipping_threshold_per_sample=5.0, l2_regularization_weight=0.00001)
     #tbWriter    = cntk.logging.TensorBoardProgressWriter(1, './Tensorboard/', model=model)
-    printer     = cntk.logging.ProgressPrinter(20, tag='Training')
+    printer     = cntk.logging.ProgressPrinter(50, tag='Training')
     trainer     = cntk.Trainer(z, (loss, error), learner, [printer])
 
     # TODO: These should be automatically detected!
-    samplesPerSeq   = 1000
-    sequences       = 1792
-    validSeqs       = 199
+    samplesPerSeq   = timeSteps
+    sequences       = 4226
+    validSeqs       = 470
 
     minibatchSize   = batchSize * samplesPerSeq
     minibatches     = sequences // batchSize
@@ -124,7 +124,7 @@ def train():
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-curate')
+    parser.add_argument('-convert')
 
     train()
 
