@@ -3,11 +3,7 @@ import numpy as np
 
 closeIdx    = 3 # Index of closing price, this is used to calculate our label
 seqDist     = 2 # Distance each sequence is separated from the one before
-writeTo     = './data/'
-
-def fromFile(filePath):
-    data = np.loadtxt(filePath, dtype=np.str, delimiter=',', skiprows=1)
-    return data
+writeTo     = './data/'  
 
 # Get a normalized value between 0-1
 def maxMin(min, minMax, x):
@@ -56,6 +52,7 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
 # Add a relative date number between 0-1 to all samples
 # in each sequence
 def relativeDating(data, timeSteps):
+    print('Adding relative dating as a feature...')
     min     = 0
     max     = timeSteps
     rDates  =  np.array([maxMin(min, max, x) for x in range(max)])
@@ -87,18 +84,22 @@ def writeCtf(destName, data):
 
 # This is specific for our current datasets
 # TODO: Add in test to data split
+# TODO: Add support for multiple source files to same dest file
+#
+#
 def convertData(filePath, destName, threshold, timeSteps, timeShift, split=[0.9,0.1]):
-    data    = fromFile(filePath)
 
-    data = data[0:366]
+    data = np.loadtxt(filePath, dtype=np.str, delimiter=',', skiprows=1)
+    #data = data[0:366]
 
     # TODO: Possibly fill in missing dates (weekends/holdiays)
     # and include dates, or relative dates into features?
     # with data based on prior prices?
-    dates   = data[:, 0:1]
+    #dates   = data[:, 0:1]
     data    = data[:, 1:].astype(np.float)
 
     # Remove adjusted data, dividend, and splits
+    # TODO: Add dividend and splits as binary features (0/1) ?
     data    = data[:,0:5]
     data    = toSequences(data, threshold, timeSteps, timeShift, seqDist)
 

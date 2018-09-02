@@ -22,13 +22,13 @@ dataPath    = './data/EOD-INTC.csv'
 timeShift   = 7     # Number of days ahead to look
 timeSteps   = 300   # Number of data points in a sequence
 threshold   = 0.03  # % Change we're looking at, up or down
-numFeatures = 5
+numFeatures = 6     
 numClasses  = 3
 
 numEpochs   = 50
-batchSize   = 32
+batchSize   = 128
 
-lstmLayers  = 4
+lstmLayers  = 8
 lstmSize    = 64    # TODO: Why are we getting NAN loss when lstmSize >= 96
 
 def createReader(filePath, isTraining, inputDim, outputDim):
@@ -57,7 +57,7 @@ def train():
 
     # TODO: Need to add a method that reads exact sample size when
     # we're loading data that's already been converted
-    convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
+    #convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
 
     input   = cntk.sequence.input_variable((numFeatures), name='features')
     label   = cntk.input_variable((numClasses), name='label')
@@ -80,7 +80,7 @@ def train():
 
     loss    = cntk.cross_entropy_with_softmax(z, label)
     error   = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
-    lr      = cntk.learning_parameter_schedule_per_sample(0.0085)
+    lr      = cntk.learning_parameter_schedule_per_sample(0.085)
     #lr = 0.5
 
     learner     = cntk.adam(z.parameters, lr, 0.9, gradient_clipping_threshold_per_sample=5.0, l2_regularization_weight=0.00001)
