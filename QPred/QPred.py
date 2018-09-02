@@ -19,17 +19,17 @@ import matplotlib.pyplot as plt
 dataPath    = './data/EOD-INTC.csv'
 
 # Data generation parameters
-timeShift   = 7    # Number of days ahead to look
-timeSteps   = 300  # Number of data points in a sequence
+timeShift   = 7     # Number of days ahead to look
+timeSteps   = 300   # Number of data points in a sequence
 threshold   = 0.03  # % Change we're looking at, up or down
 numFeatures = 5
 numClasses  = 3
 
 numEpochs   = 50
-batchSize   = 16
+batchSize   = 32
 
 lstmLayers  = 4
-lstmSize    = 64 # TODO: Why are we getting NAN loss when lstmSize >= 96
+lstmSize    = 64    # TODO: Why are we getting NAN loss when lstmSize >= 96
 
 def createReader(filePath, isTraining, inputDim, outputDim):
     return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(filePath, cntk.io.StreamDefs(
@@ -80,10 +80,7 @@ def train():
 
     loss    = cntk.cross_entropy_with_softmax(z, label)
     error   = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
-    #error   = cntk.classification_error(z, label)
-
-
-    lr = cntk.learning_parameter_schedule_per_sample(0.0085)
+    lr      = cntk.learning_parameter_schedule_per_sample(0.0085)
     #lr = 0.5
 
     learner     = cntk.adam(z.parameters, lr, 0.9, gradient_clipping_threshold_per_sample=5.0, l2_regularization_weight=0.00001)
