@@ -9,12 +9,14 @@ def fromFile(filePath):
     data = np.loadtxt(filePath, dtype=np.str, delimiter=',', skiprows=1)
     return data
 
+# Get a normalized value between 0-1
+def maxMin(min, minMax, x):
+    return (x - min) / minMax
+
 # Normalize features in each sequence
 # to other data points in the same feature/sequence
 def normalize(data):
     print('Normalizing Data...')
-    def maxMin(min, minMax, x):
-        return (x - min) / minMax
 
     for s in data:
         ss = s[0]
@@ -51,6 +53,18 @@ def toSequences(data, threshold, timeSteps, timeShift, seqDist):
 
     return seqs
 
+# Add a relative date number between 0-1 to all samples
+# in each sequence
+def relativeDating(data, timeSteps):
+    min     = 0
+    max     = timeSteps
+    rDates  =  np.array([maxMin(min, max, x) for x in range(max)])
+    
+    for seq in data:
+        seq[0] = np.column_stack([seq[0], rDates])
+
+
+
 def writeCtf(destName, data):
     wFileName   = writeTo + destName + '.ctf'
     file        = open(wFileName, "w+")
@@ -76,7 +90,7 @@ def writeCtf(destName, data):
 def convertData(filePath, destName, threshold, timeSteps, timeShift, split=[0.9,0.1]):
     data    = fromFile(filePath)
 
-    #data = data[0:5000]
+    data = data[0:366]
 
     # TODO: Possibly fill in missing dates (weekends/holdiays)
     # and include dates, or relative dates into features?
@@ -89,6 +103,7 @@ def convertData(filePath, destName, threshold, timeSteps, timeShift, split=[0.9,
     data    = toSequences(data, threshold, timeSteps, timeShift, seqDist)
 
     normalize(data)
+    relativeDating(data, timeSteps)
     
     # TODO: This presents an intersting question on how to split data when
     # sequences overlap. Should it be purely based on time ensuring no overlap?

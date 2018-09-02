@@ -57,7 +57,7 @@ def train():
 
     # TODO: Need to add a method that reads exact sample size when
     # we're loading data that's already been converted
-    #convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
+    convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
 
     input   = cntk.sequence.input_variable((numFeatures), name='features')
     label   = cntk.input_variable((numClasses), name='label')
