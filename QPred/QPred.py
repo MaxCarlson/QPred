@@ -20,15 +20,17 @@ dataPath    = './data/EOD-INTC.csv'
 
 # Data generation parameters
 timeShift   = 7     # Number of days ahead to look
-timeSteps   = 300   # Number of data points in a sequence
+timeSteps   = 14    # Number of data points in a sequence
 threshold   = 0.03  # % Change we're looking at, up or down
+seqDist     = 1     # Distance each sequence is separated from the one before
+
 numFeatures = 6     
 numClasses  = 3
 
 numEpochs   = 50
 batchSize   = 128
 
-lstmLayers  = 8
+lstmLayers  = 24
 lstmSize    = 64    # TODO: Why are we getting NAN loss when lstmSize >= 96
 
 def createReader(filePath, isTraining, inputDim, outputDim):
@@ -42,11 +44,11 @@ def createModel(input, numClasses, layers, lstmLayers):
     model = cntk.layers.Sequential([
         cntk.layers.For(range(layers), lambda: 
                    cntk.layers.Sequential([
-                       cntk.layers.Stabilizer(), 
+                       #cntk.layers.Stabilizer(), 
                        cntk.layers.Recurrence(cntk.layers.LSTM(lstmLayers), go_backwards=False)
                    ])),
         cntk.sequence.last,
-        cntk.layers.Dropout(0.1),
+        #cntk.layers.Dropout(0.1),
         cntk.layers.Dense(numClasses)
         ])
     return model
@@ -57,7 +59,7 @@ def train():
 
     # TODO: Need to add a method that reads exact sample size when
     # we're loading data that's already been converted
-    #convertData(dataPath, 'intel', threshold, timeSteps, timeShift)
+    #convertData(dataPath, 'intel', threshold, timeSteps, timeShift, seqDist)
 
     input   = cntk.sequence.input_variable((numFeatures), name='features')
     label   = cntk.input_variable((numClasses), name='label')
@@ -80,25 +82,24 @@ def train():
 
     loss    = cntk.cross_entropy_with_softmax(z, label)
     error   = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
-    lr      = cntk.learning_parameter_schedule_per_sample(0.085)
-    #lr = 0.5
 
-    learner     = cntk.adam(z.parameters, lr, 0.9, gradient_clipping_threshold_per_sample=5.0, l2_regularization_weight=0.00001)
+    lr          = cntk.learning_parameter_schedule(0.05, batchSize)
+    learner     = cntk.adam(z.parameters, lr, 0.9) #, l2_regularization_weight=0.00001, gradient_clipping_threshold_per_sample=5.0
     #tbWriter    = cntk.logging.TensorBoardProgressWriter(1, './Tensorboard/', model=model)
-    printer     = cntk.logging.ProgressPrinter(50, tag='Training')
+    printer     = cntk.logging.ProgressPrinter(100, tag='Training')
     trainer     = cntk.Trainer(z, (loss, error), learner, [printer])
 
     # TODO: These should be automatically detected!
     samplesPerSeq   = timeSteps
-    sequences       = 4226
-    validSeqs       = 470
+    sequences       = 8451
+    validSeqs       = 940
 
     minibatchSize   = batchSize * samplesPerSeq
     minibatches     = sequences // batchSize
     validBatches    = validSeqs // batchSize
 
     cntk.logging.log_number_of_parameters(z)
-    print("Input days: {}; Looking for +-= {:.1f}% change {} days ahead;".format(samplesPerSeq, threshold*100.0, timeShift))
+    print("Input days: {}; Looking for +- {:.1f}% change {} days ahead;".format(samplesPerSeq, threshold*100.0, timeShift))
     print("Total Sequences: {}; {} epochs; {} minibatches per epoch;".format(sequences + validSeqs, numEpochs, minibatches+validBatches))
 
     for e in range(numEpochs):

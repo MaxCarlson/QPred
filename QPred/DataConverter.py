@@ -2,7 +2,6 @@ import copy
 import numpy as np
 
 closeIdx    = 3 # Index of closing price, this is used to calculate our label
-seqDist     = 2 # Distance each sequence is separated from the one before
 writeTo     = './data/'  
 
 # Get a normalized value between 0-1
@@ -66,7 +65,7 @@ def writeCtf(destName, data):
     wFileName   = writeTo + destName + '.ctf'
     file        = open(wFileName, "w+")
 
-    print('Writing to ./' + wFileName)
+    print('Writing to ' + wFileName)
 
     sId = 0
     for seq in data:
@@ -87,7 +86,7 @@ def writeCtf(destName, data):
 # TODO: Add support for multiple source files to same dest file
 #
 #
-def convertData(filePath, destName, threshold, timeSteps, timeShift, split=[0.9,0.1]):
+def convertData(filePath, destName, threshold, timeSteps, timeShift, seqDist, split=[0.9,0.1]):
 
     data = np.loadtxt(filePath, dtype=np.str, delimiter=',', skiprows=1)
     #data = data[0:366]
