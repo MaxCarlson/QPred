@@ -81,18 +81,18 @@ def train():
     z       = model(input)
 
     loss    = cntk.cross_entropy_with_softmax(z, label)
-    error   = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
+    accy    = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
 
     lr          = cntk.learning_parameter_schedule(0.05, batchSize)
     learner     = cntk.adam(z.parameters, lr, 0.9) #, l2_regularization_weight=0.00001, gradient_clipping_threshold_per_sample=5.0
     #tbWriter    = cntk.logging.TensorBoardProgressWriter(1, './Tensorboard/', model=model)
     printer     = cntk.logging.ProgressPrinter(100, tag='Training')
-    trainer     = cntk.Trainer(z, (loss, error), learner, [printer])
+    trainer     = cntk.Trainer(z, (loss, accy), learner, [printer])
 
     # TODO: These should be automatically detected!
     samplesPerSeq   = timeSteps
-    sequences       = 8451
-    validSeqs       = 940
+    sequences       = 8709
+    validSeqs       = 968
 
     minibatchSize   = batchSize * samplesPerSeq
     minibatches     = sequences // batchSize
