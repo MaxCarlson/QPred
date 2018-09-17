@@ -84,7 +84,7 @@ def train():
     loss    = cntk.cross_entropy_with_softmax(z, label)
     accy    = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
 
-    lr          = cntk.learning_parameter_schedule(0.05, batchSize)
+    lr          = cntk.learning_parameter_schedule(0.005, batchSize)
     learner     = cntk.adam(z.parameters, lr, 0.9) #, l2_regularization_weight=0.00001, gradient_clipping_threshold_per_sample=5.0
     #tbWriter    = cntk.logging.TensorBoardProgressWriter(1, './Tensorboard/', model=model)
     printer     = cntk.logging.ProgressPrinter(100, tag='Training')
@@ -103,10 +103,21 @@ def train():
     print("Input days: {}; Looking for +- {:.1f}% change {} days ahead;".format(samplesPerSeq, threshold*100.0, timeShift))
     print("Total Sequences: {}; {} epochs; {} minibatches per epoch;".format(sequences + validSeqs, numEpochs, minibatches+validBatches))
 
-    # Testing out data reader
+    # Testing out custom data reader
     reader = DataReader('./data/intel_train.ctf', numFeatures, numClasses, batchSize, timeSteps, False)
+    testReader = DataReader('./data/intel_valid.ctf', numFeatures, numClasses, batchSize, timeSteps, False)
+    for e in range(numEpochs):
+        # Train network
+        for b in range(minibatches):
+            X, Y = next(reader)
+            trainer.train_minibatch({ z.arguments[0]: X, label: Y })
+        trainer.summarize_training_progress()
 
-    xx, yy = next(reader)
+        for b in range(minibatches):
+            X, Y = next(testReader)
+            trainer.test_minibatch({ z.arguments[0]: X, label: Y })
+        trainer.summarize_test_progress()
+
 
     for e in range(numEpochs):
         # Train network

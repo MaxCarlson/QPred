@@ -25,29 +25,16 @@ class DataReader():
         while True:
             seqIdx      = 0
             batchIdx    = 0
-            feats       = np.zeros((self.batchSize, self.seqLen, self.numFeatures))
-            labs        = np.zeros((self.batchSize, self.numClasses))
+            feats       = np.zeros((self.batchSize, self.seqLen, self.numFeatures), dtype=np.float32)
+            labs        = np.zeros((self.batchSize, self.numClasses), dtype=np.float32)
 
             for l in self.file:
-                blocks = l.split(self.delimiter)
+                blocks = l.split()
 
                 # New sequence
-                if batchIdx >= self.seqLen:
+                if seqIdx >= self.seqLen:
                    batchIdx += 1
                    seqIdx    = 0
-                
-
-                # Add features to array
-                featIdx = 0
-                for i in blocks[2:8]:
-                    feats[batchIdx, seqIdx, featIdx] = float(i)
-
-                seqIdx += 1
-
-                # If we're looking at the first set of features 
-                # in a sequence than the last element is the sparse label
-                if seqIdx == 0:
-                    labs[batchIdx, blocks[-1]] = 1
 
                 # If our batch has been filled yield the batch
                 if batchIdx == self.batchSize:
@@ -55,7 +42,24 @@ class DataReader():
 
                     seqIdx      = 0
                     batchIdx    = 0
+                
 
+                # Add features to array
+                featIdx = 0
+                for i in blocks[2:8]:
+                    feats[batchIdx, seqIdx, featIdx] = np.float(i)
+                    featIdx += 1
+
+                # If we're looking at the first set of features 
+                # in a sequence than the last element is the sparse label
+
+                if seqIdx == 0:
+                    labs[batchIdx, int(blocks[-1][0])] = 1.0
+
+                seqIdx += 1
+
+            # Reset file to line 0
+            self.file.seek(0)
 
 
 
