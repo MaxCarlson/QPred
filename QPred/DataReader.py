@@ -1,12 +1,11 @@
 import numpy as np
 
 class DataReader():
-    def __init__(self, path, features, labels, numFeatures, numClasses, batchSize, random):
+    def __init__(self, path, numFeatures, numClasses, batchSize, seqLen, random):
         self.path       = path
         self.delimiter  = ' '
-        self.random     = random
-        self.features   = features
-        self.labels     = labels
+        self.batchSize  = batchSize
+        self.seqLen     = seqLen
         self.numFeatures = numFeatures
         self.numClasses = numClasses
         self.file       = open(path, "r")
@@ -23,15 +22,43 @@ class DataReader():
 
     def normalGen(self):
 
-        fbatch = np.zeros(1)
-
         while True:
-            seqId = 0
+            seqIdx      = 0
+            batchIdx    = 0
+            feats       = np.zeros((self.batchSize, self.seqLen, self.numFeatures))
+            labs        = np.zeros((self.batchSize, self.numClasses))
 
             for l in self.file:
                 blocks = l.split(self.delimiter)
 
-                if seqId != blocks[0]:
-                    pass
-                else:
+                # New sequence
+                if batchIdx >= self.seqLen:
+                   batchIdx += 1
+                   seqIdx    = 0
+                
+
+                # Add features to array
+                featIdx = 0
+                for i in blocks[2:8]:
+                    feats[batchIdx, seqIdx, featIdx] = float(i)
+
+                seqIdx += 1
+
+                # If we're looking at the first set of features 
+                # in a sequence than the last element is the sparse label
+                if seqIdx == 0:
+                    labs[batchIdx, blocks[-1]] = 1
+
+                # If our batch has been filled yield the batch
+                if batchIdx == self.batchSize:
+                    yield feats, labs
+
+                    seqIdx      = 0
+                    batchIdx    = 0
+
+
+
+
+
+                
 

@@ -1,6 +1,7 @@
 import cntk
 import argparse
 import numpy as np
+from DataReader import DataReader
 from DataConverter import convertData
 import matplotlib.pyplot as plt
 
@@ -101,6 +102,11 @@ def train():
     cntk.logging.log_number_of_parameters(z)
     print("Input days: {}; Looking for +- {:.1f}% change {} days ahead;".format(samplesPerSeq, threshold*100.0, timeShift))
     print("Total Sequences: {}; {} epochs; {} minibatches per epoch;".format(sequences + validSeqs, numEpochs, minibatches+validBatches))
+
+    # Testing out data reader
+    reader = DataReader('./data/intel_train.ctf', numFeatures, numClasses, batchSize, timeSteps, False)
+
+    xx, yy = next(reader)
 
     for e in range(numEpochs):
         # Train network
