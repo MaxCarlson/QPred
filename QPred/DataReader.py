@@ -21,7 +21,6 @@ class DataReader():
         pass
 
     def normalGen(self):
-
         while True:
             seqIdx      = 0
             batchIdx    = 0
@@ -32,14 +31,16 @@ class DataReader():
                 blocks = l.split()
 
                 # New sequence
-                if seqIdx >= self.seqLen:
+                if seqIdx == self.seqLen:
                    batchIdx += 1
                    seqIdx    = 0
 
                 # If our batch has been filled yield the batch
                 if batchIdx == self.batchSize:
                     yield feats, labs
-
+                    labs.fill(0)
+                    feats.fill(0)
+                    
                     seqIdx      = 0
                     batchIdx    = 0
                 
@@ -54,7 +55,7 @@ class DataReader():
                 # in a sequence than the last element is the sparse label
 
                 if seqIdx == 0:
-                    labs[batchIdx, int(blocks[-1][0])] = 1.0
+                    labs[batchIdx, int(blocks[-1][0])] = 1.
 
                 seqIdx += 1
 

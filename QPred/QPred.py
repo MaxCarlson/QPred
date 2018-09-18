@@ -1,9 +1,9 @@
 import cntk
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 from DataReader import DataReader
 from DataConverter import convertData
-import matplotlib.pyplot as plt
 
 # Pandas datareader error workaround 
 #import pandas as pd
@@ -31,8 +31,8 @@ numClasses  = 3
 numEpochs   = 50
 batchSize   = 128
 
-lstmLayers  = 24
-lstmSize    = 64    # TODO: Why are we getting NAN loss when lstmSize >= 96
+lstmLayers  = 10
+lstmSize    = 128    # TODO: Why are we getting NAN loss when lstmSize >= 96
 
 def createReader(filePath, isTraining, inputDim, outputDim):
     return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(filePath, cntk.io.StreamDefs(
@@ -45,11 +45,11 @@ def createModel(input, numClasses, layers, lstmLayers):
     model = cntk.layers.Sequential([
         cntk.layers.For(range(layers), lambda: 
                    cntk.layers.Sequential([
-                       #cntk.layers.Stabilizer(), 
+                       cntk.layers.Stabilizer(), 
                        cntk.layers.Recurrence(cntk.layers.LSTM(lstmLayers), go_backwards=False)
                    ])),
         cntk.sequence.last,
-        #cntk.layers.Dropout(0.1),
+        cntk.layers.Dropout(0.1),
         cntk.layers.Dense(numClasses)
         ])
     return model
@@ -84,7 +84,7 @@ def train():
     loss    = cntk.cross_entropy_with_softmax(z, label)
     accy    = cntk.element_not(cntk.classification_error(z, label)) # Print accuracy %, not error! 
 
-    lr          = cntk.learning_parameter_schedule(0.005, batchSize)
+    lr          = cntk.learning_parameter_schedule(0.05, batchSize)
     learner     = cntk.adam(z.parameters, lr, 0.9) #, l2_regularization_weight=0.00001, gradient_clipping_threshold_per_sample=5.0
     #tbWriter    = cntk.logging.TensorBoardProgressWriter(1, './Tensorboard/', model=model)
     printer     = cntk.logging.ProgressPrinter(100, tag='Training')
@@ -104,8 +104,9 @@ def train():
     print("Total Sequences: {}; {} epochs; {} minibatches per epoch;".format(sequences + validSeqs, numEpochs, minibatches+validBatches))
 
     # Testing out custom data reader
-    reader = DataReader('./data/intel_train.ctf', numFeatures, numClasses, batchSize, timeSteps, False)
-    testReader = DataReader('./data/intel_valid.ctf', numFeatures, numClasses, batchSize, timeSteps, False)
+    reader      = DataReader('./data/intel_train.ctf', numFeatures, numClasses, batchSize, timeSteps, False)
+    testReader  = DataReader('./data/intel_valid.ctf', numFeatures, numClasses, batchSize, timeSteps, False)
+
     for e in range(numEpochs):
         # Train network
         for b in range(minibatches):
@@ -113,33 +114,34 @@ def train():
             trainer.train_minibatch({ z.arguments[0]: X, label: Y })
         trainer.summarize_training_progress()
 
+        # Look at data we've not trained on (validation)
         for b in range(minibatches):
             X, Y = next(testReader)
             trainer.test_minibatch({ z.arguments[0]: X, label: Y })
         trainer.summarize_test_progress()
 
 
-    for e in range(numEpochs):
+    #for e in range(numEpochs):
         # Train network
-        for b in range(minibatches):
-            mb = trainReader.next_minibatch(minibatchSize, trainInputMap)
-            trainer.train_minibatch(mb)
-        trainer.summarize_training_progress()
+    #    for b in range(minibatches):
+    #        mb = trainReader.next_minibatch(minibatchSize, trainInputMap)
+    #        trainer.train_minibatch(mb)
+    #    trainer.summarize_training_progress()
 
         # Validate results
-        for b in range(validBatches):
-            mb = validReader.next_minibatch(minibatchSize, validInputMap)
-            trainer.test_minibatch(mb)
-        trainer.summarize_test_progress()
-        print()
+    #     for b in range(validBatches):
+    #        mb = validReader.next_minibatch(minibatchSize, validInputMap)
+    #        trainer.test_minibatch(mb)
+    #    trainer.summarize_test_progress()
+    #    print()
 
 
 
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-convert')
+    #parser = argparse.ArgumentParser()
+    #parser.add_argument('-convert')
 
     train()
 
